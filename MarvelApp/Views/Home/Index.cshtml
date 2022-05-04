@@ -6,36 +6,47 @@
 <h3 class="text-center">Filtre</h3>
 <form class="text-center" method="post">
     <div class="row">
+        <div class="col-10 my-1">
+            <input asp-for="FiltroDePesquisa.Nome" placeholder="Digite o nome do personagem." class="form-control" />
+        </div>
         <div class="col-2 my-1">
-            <label>ID:</label>
-            <input asp-for="FiltroDePesquisa.ID" placeholder="Digite um ID" class="form-control" />
+            <input asp-for="FiltroDePesquisa.NomeInicial" placeholder="Palavra ou Letra" class="form-control" />
         </div>
-        <div class="col-3 my-1">
-            <label>Nome:</label>
-            <input asp-for="FiltroDePesquisa.Nome" placeholder="Digite o nome do personagem" class="form-control" />
+        <div class="col-12 my-1">
+            <select asp-for="FiltroDePesquisa.orderBy" class="form-control">
+                <option value="0">Ordene</option>
+                <option value="name">Nome</option>
+                <option value="modified">Data de Modificação</option>
+            </select>
         </div>
-        <div class="col-5 my-1">
-            <label>Descrição:</label>
-            <input rows="3" asp-for="FiltroDePesquisa.Descricao" placeholder="Digite a descrição do personagem" class="form-control" />
-        </div>
-        <div class="col-2 mt-2">
-            <label></label>
-            <button class="form-control" type="submit">Procurar</button>
-        </div>
-        <div class="col-12"><hr /></div>
-        <div class="col-12 my-4 mx-0 d-flex justify-content-center">
+        <div class="col-12 mt-2 d-flex justify-content-center">
             <div class="col-3">
-                <select name="pagina" oninput="this.form.submit()" class="form-control">
-                    @{
-                        <option value="100">Selecione uma pagina</option>
-                        for (int i = 0; i < Model.Personagens.Count() / 50; i++)
-                        {
-                            <option value="@i">@(i)</option>
-                        }
-                    }
-                </select>
+                <label></label>
+                <button class="form-control btn btn-primary" onclick="myFunction()" type="submit">Procurar</button>
             </div>
         </div>
+        <div class="col-12"><hr /></div>
+        @{
+            if (Model.ContagemDePaginas != 0)
+            {
+                <div class="col-12 my-4 mx-0 d-flex justify-content-center">
+                    <div class="col-3">
+                        <label>Pagina:</label>
+                        <select asp-for="Pagina" oninput="this.form.submit()" class="form-control">
+                            @{
+
+                                for (int i = 0; i < (Model.ContagemDePaginas); i++)
+                                {
+                                    <option value="@i">@(i)</option>
+                                }
+                            }
+                        </select>
+                        <input id="paginaAntiga" name="paginaAntiga" type="hidden" value="0" />
+                    </div>
+
+                </div>
+            }
+        }
 
 
     </div>
@@ -105,3 +116,10 @@
 
 </form>
 
+
+<script>
+    function myFunction() {
+         document.getElementById('paginaAntiga').value = @Model.Pagina;
+    }
+
+</script>

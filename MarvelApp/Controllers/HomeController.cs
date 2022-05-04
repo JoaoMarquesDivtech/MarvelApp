@@ -21,23 +21,35 @@ namespace MarvelApp.Controllers
 
         public IActionResult Index()
         {
+            ViewData["Pagina"] = 0;
             personagemPageDto personagemPageDto = new();
-            personagemPageDto.Personagens = ConsultarPersonagens();
+            personagemPageDto = ConsultarPersonagens();
+
             return View(personagemPageDto);
         }
 
         [HttpPost]
         public IActionResult Index(personagemPageDto personagemPageDto)
         {
-            var Personagem = ConsultarPersonagens(personagem: personagemPageDto.FiltroDePesquisa);
-            return View(Personagem);
+            var paginaAntiga = Convert.ToInt32(Request.Form["paginaAntiga"]);
+            if(paginaAntiga == personagemPageDto.Pagina) {
+                personagemPageDto.Pagina = 0;
+                personagemPageDto = ConsultarPersonagens(personagem: personagemPageDto.FiltroDePesquisa, pagina: personagemPageDto.Pagina);
+            }
+            else
+            {
+                personagemPageDto = ConsultarPersonagens(pagina: personagemPageDto.Pagina, ultimaConsulta : personagemPageDto.ultimaConsulta);
+            }
+
+            
+            return View(personagemPageDto);
         }
 
 
 
-        public List<personagem> ConsultarPersonagens([Optional] List<int> Favoritos, [Optional] int pagina, [Optional] personagem personagem)
+        public personagemPageDto ConsultarPersonagens([Optional] List<int> Favoritos, [Optional] int pagina, [Optional] pesquisaPersonagemDto personagem, [Optional] string ultimaConsulta)
         {
-            List<personagem> Personagens = new();
+            personagemPageDto personagemPageDto = new();
             personagem Personagem = new();
             using (var client = new HttpClient())
             {
@@ -48,21 +60,24 @@ namespace MarvelApp.Controllers
 
                 string ts = DateTime.Now.Ticks.ToString();
                 string hash = GerarHash(ts, publicKey, privateKey);
-                var consulta = baseUrl + $"?ts={ts}&apikey={publicKey}&hash={hash}&orderBy=name";
+                var consulta = baseUrl + $"?ts={ts}&apikey={publicKey}&hash={hash}";
+                consulta += "&limit=90";
 
+                if (pagina != 0)
+                {
+                    if (ultimaConsulta != null)
+                        consulta = ultimaConsulta;
 
-                if(personagem != null) { 
-                if (personagem.Descricao != null)
-                    consulta += "&description=" + personagem.Descricao;
-
-                if (personagem.Nome != null)
-                    consulta += "&name=" + personagem.Nome;
+                    personagemPageDto.Pagina = pagina;
+                    int contagemIgnorada = pagina * 30;
+                    consulta += $"&offset={contagemIgnorada}";
                 }
 
-                consulta += "&limit=50";
+                
 
                 if (Favoritos.Count != 0)
                 {
+                    
                     foreach (var favorito in Favoritos)
                     {
                         consulta += $"&id={favorito}";
@@ -74,17 +89,39 @@ namespace MarvelApp.Controllers
 
                         dynamic resultadoFavoritos = JsonConvert.DeserializeObject(responseFavorito.Content.ReadAsStringAsync().Result);
 
+                        if (resultadoFavoritos.data.total != null)
+                        {
+                            personagemPageDto.ContagemDePaginas = Convert.ToInt32(resultadoFavoritos.data.total.Value);
+                            personagemPageDto.ContagemDePaginas = (personagemPageDto.ContagemDePaginas - (personagemPageDto.ContagemDePaginas % 30)) / 30;
+                        }
+
                         Personagem.ID = resultadoFavoritos.data.results[0].id;
                         Personagem.Nome = resultadoFavoritos.data.results[0].name;
                         Personagem.Descricao = resultadoFavoritos.data.results[0].description;
                         Personagem.URLIMAGEM = resultadoFavoritos.data.results[0].thumbnail.path + "." + resultadoFavoritos.data.results[0].thumbnail.extension;
                         Personagem.URLWIKI = resultadoFavoritos.data.results[0].url;
-                        Personagens.Add(Personagem);
+                        personagemPageDto.Personagens.Add(Personagem);
 
                     }
-                    return Personagens;
-                }
 
+                    return personagemPageDto;
+                }
+                else
+                {
+
+                    if (personagem != null)
+                    {
+
+                        if (personagem.NomeInicial != null)
+                            consulta += "&nameStartsWith="+personagem.NomeInicial;
+                        if (personagem.Nome != null)
+                            consulta += "&name="+personagem.Nome;
+                        if (personagem.orderBy != "0")
+                            consulta += "&orderBy="+personagem.orderBy;
+
+                    }
+                }
+            //name=teste&nameStartsWith=a&modifiedSince=12-03&comics=teste&series=teste&events=teste&stories=teste&orderBy=name
 
                 HttpResponseMessage response = client.GetAsync(consulta).Result;
 
@@ -96,7 +133,11 @@ namespace MarvelApp.Controllers
 
                 dynamic resultado = JsonConvert.DeserializeObject(conteudo);
 
-
+                if (resultado.data.total != null)
+                {
+                    personagemPageDto.ContagemDePaginas = Convert.ToInt32(resultado.data.total.Value);
+                    personagemPageDto.ContagemDePaginas = (personagemPageDto.ContagemDePaginas - (personagemPageDto.ContagemDePaginas % 30)) / 30;
+                }
 
                 foreach (var obj in resultado.data.results)
                 {
@@ -106,11 +147,11 @@ namespace MarvelApp.Controllers
                     Personagem.Descricao = obj.description;
                     Personagem.URLIMAGEM = obj.thumbnail.path + "." + obj.thumbnail.extension;
                     Personagem.URLWIKI = obj.urls[1].url;
-                    Personagens.Add(Personagem);
+                    personagemPageDto.Personagens.Add(Personagem);
                 }
 
-
-                return Personagens;
+                personagemPageDto.ultimaConsulta = consulta;
+                return personagemPageDto;
             }
         }
 

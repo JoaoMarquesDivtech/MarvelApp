@@ -8,9 +8,11 @@ namespace MarvelApp.Dto
 {
     public class personagemPageDto
     {
-        public personagem FiltroDePesquisa { get; set; }
-        public List<personagem> PersonagensFavoritos { get; set; }
-        public List<personagem> Personagens { get; set; }
+        public pesquisaPersonagemDto FiltroDePesquisa { get; set; } 
+        public List<personagem> PersonagensFavoritos { get; set; } = new();
+        public List<personagem> Personagens { get; set; } = new();
         public int Pagina { get; set; }
+        public int ContagemDePaginas { get; set; }
+        public string ultimaConsulta { get; set; }
     }
 }

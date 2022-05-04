@@ -12,5 +12,6 @@ namespace MarvelApp.Data
         public string Descricao { get; set; }
         public string URLIMAGEM { get; set; }
         public string URLWIKI { get; set; }
+        public string Total { get; set; }
     }
 }
