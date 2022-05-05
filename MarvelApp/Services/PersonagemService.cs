@@ -49,18 +49,22 @@ namespace MarvelApp.Services
         public static string GerarHashCode(string ts, string publicKey, string privateKey)
         {
             byte[] bytes =
-                Encoding.UTF8.GetBytes(ts + privateKey + publicKey);
+                Encoding.UTF8
+                .GetBytes(ts + privateKey + publicKey);
             var gerador = MD5.Create();
             byte[] bytesHash = gerador.ComputeHash(bytes);
             return BitConverter.ToString(bytesHash)
-                .ToLower().Replace("-", String.Empty);
+                .ToLower()
+                .Replace("-", String.Empty);
         }
 
         public static List<int> ConsultarIdPersonagensFavoritos()
         {
             using (var db = new DataBaseContext())
             {
-                var context = db.personagensFavoritos.Select(tb => tb.IdFavorito).ToList();
+                var context = db.personagensFavoritos
+                    .Select(tb => tb.IdFavorito)
+                    .ToList();
                 return context;
             }
         }
@@ -85,7 +89,7 @@ namespace MarvelApp.Services
                 string ts = DateTime.Now.Ticks.ToString();
                 string hash = PersonagemService.GerarHashCode(ts, publicKey, privateKey);
                 var consulta = baseUrl + $"?ts={ts}&apikey={publicKey}&hash={hash}";
-                consulta += "&limit=90";
+                
 
 
 
@@ -93,6 +97,7 @@ namespace MarvelApp.Services
 
                 if (Favoritos.Count != 0)
                 {
+                    consulta += "&limit=1";
 
                     foreach (var favorito in Favoritos)
                     {
@@ -119,6 +124,7 @@ namespace MarvelApp.Services
                 }
                 else
                 {
+                    consulta += "&limit=30";
 
                     if (pagina != 0)
                     {

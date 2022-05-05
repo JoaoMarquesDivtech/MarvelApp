@@ -20,32 +20,48 @@ namespace MarvelApp.Controllers
 
         public IActionResult Index()
         {
-            ViewData["Pagina"] = 0;
-            personagemPageDto personagemPageDto = new();
-            personagemPageDto = PersonagemService.ConsultarPersonagens();
-            var IdFavoritos = PersonagemService.ConsultarIdPersonagensFavoritos().ToList();
-            personagemPageDto.PersonagensFavoritos = PersonagemService.ConsultarPersonagens(Favoritos: IdFavoritos).PersonagensFavoritos;
-            personagemPageDto.Personagens = personagemPageDto.Personagens.Except(personagemPageDto.PersonagensFavoritos).ToList();
-            return View(personagemPageDto);
+            try
+            {
+                personagemPageDto personagemPageDto = new();
+                personagemPageDto = PersonagemService.ConsultarPersonagens();
+                var IdFavoritos = PersonagemService.ConsultarIdPersonagensFavoritos().ToList();
+                personagemPageDto.PersonagensFavoritos = PersonagemService.ConsultarPersonagens(Favoritos: IdFavoritos).PersonagensFavoritos;
+                personagemPageDto.Personagens = personagemPageDto.Personagens.Except(personagemPageDto.PersonagensFavoritos).ToList();
+                return View(personagemPageDto);
+            }
+            catch (Exception ex)
+            {
+                return RedirectToAction("Error", new { error = ex.Message });
+            }
         }
 
         [HttpPost]
         public IActionResult Index(personagemPageDto personagemPageDto)
         {
-            var paginaAntiga = Convert.ToInt32(Request.Form["paginaAntiga"]);
-            if (paginaAntiga == personagemPageDto.Pagina)
+            try
             {
-                personagemPageDto.Pagina = 0;
-                personagemPageDto = PersonagemService.ConsultarPersonagens(personagem: personagemPageDto.FiltroDePesquisa, pagina: personagemPageDto.Pagina);
-                personagemPageDto.PersonagensFavoritos = PersonagemService.ConsultarPersonagens(PersonagemService.ConsultarIdPersonagensFavoritos()).PersonagensFavoritos;
-                personagemPageDto.Personagens = personagemPageDto.Personagens.Except(personagemPageDto.PersonagensFavoritos).ToList();
+
+                var paginaAntiga = Convert.ToInt32(Request.Form["paginaAntiga"]);
+
+                if (paginaAntiga == personagemPageDto.Pagina)
+                {
+                    personagemPageDto.Pagina = 0;
+                    personagemPageDto = PersonagemService.ConsultarPersonagens(personagem: personagemPageDto.FiltroDePesquisa, pagina: personagemPageDto.Pagina);
+                    personagemPageDto.PersonagensFavoritos = PersonagemService.ConsultarPersonagens(PersonagemService.ConsultarIdPersonagensFavoritos()).PersonagensFavoritos;
+                    personagemPageDto.Personagens = personagemPageDto.Personagens.Except(personagemPageDto.PersonagensFavoritos).ToList();
+                }
+                else
+                {
+                    personagemPageDto = PersonagemService.ConsultarPersonagens(pagina: personagemPageDto.Pagina, ultimaConsulta: personagemPageDto.ultimaConsulta);
+                    personagemPageDto.Personagens.Except(personagemPageDto.PersonagensFavoritos);
+                    personagemPageDto.PersonagensFavoritos = PersonagemService.ConsultarPersonagens(PersonagemService.ConsultarIdPersonagensFavoritos()).PersonagensFavoritos;
+                    personagemPageDto.Personagens = personagemPageDto.Personagens.Except(personagemPageDto.PersonagensFavoritos).ToList();
+                }
+
             }
-            else
+            catch (Exception ex)
             {
-                personagemPageDto = PersonagemService.ConsultarPersonagens(pagina: personagemPageDto.Pagina, ultimaConsulta: personagemPageDto.ultimaConsulta);
-                personagemPageDto.Personagens.Except(personagemPageDto.PersonagensFavoritos);
-                personagemPageDto.PersonagensFavoritos = PersonagemService.ConsultarPersonagens(PersonagemService.ConsultarIdPersonagensFavoritos()).PersonagensFavoritos;
-                personagemPageDto.Personagens = personagemPageDto.Personagens.Except(personagemPageDto.PersonagensFavoritos).ToList();
+                return RedirectToAction("Error", new { error = ex.Message });
             }
 
 
@@ -57,15 +73,23 @@ namespace MarvelApp.Controllers
 
         public IActionResult Favorito(int id, bool retirar = false)
         {
-            try {
+            try
+            {
                 PersonagemService.Favoritar(id, retirar);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                //Tratamento vazio provisorio
+                return RedirectToAction("Error", new { error = ex.Message });
             }
 
             return RedirectToAction("Index");
+        }
+
+        public IActionResult Error(string error)
+        {
+            ViewData["Error"] = error;
+
+            return View();
         }
 
 
