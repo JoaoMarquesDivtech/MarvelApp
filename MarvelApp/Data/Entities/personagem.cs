@@ -13,5 +13,29 @@ namespace MarvelApp.Data
         public string URLIMAGEM { get; set; }
         public string URLWIKI { get; set; }
         public string Total { get; set; }
+        public bool favorito { get; set; }
+
+
+        public override int GetHashCode()
+        {
+            return Convert.ToInt32(ID);
+        }
+        public override bool Equals(object obj)
+        {    
+            if ((obj == null) || !this.GetType().Equals(obj.GetType()))
+            {
+                return false;
+            }
+            else
+            {
+                personagem personagem = (personagem)obj;
+                return (personagem.ID == ID) ? true : false;
+            }
+        }
+
+
+
     }
+
+
 }

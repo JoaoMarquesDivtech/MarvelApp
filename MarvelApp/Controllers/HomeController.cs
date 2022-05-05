@@ -24,7 +24,9 @@ namespace MarvelApp.Controllers
             ViewData["Pagina"] = 0;
             personagemPageDto personagemPageDto = new();
             personagemPageDto = ConsultarPersonagens();
-
+            var IdFavoritos = ConsultarFavoritos().ToList();
+            personagemPageDto.PersonagensFavoritos = ConsultarPersonagens(Favoritos: IdFavoritos).PersonagensFavoritos;
+            personagemPageDto.Personagens = personagemPageDto.Personagens.Except(personagemPageDto.PersonagensFavoritos).ToList();
             return View(personagemPageDto);
         }
 
@@ -32,16 +34,20 @@ namespace MarvelApp.Controllers
         public IActionResult Index(personagemPageDto personagemPageDto)
         {
             var paginaAntiga = Convert.ToInt32(Request.Form["paginaAntiga"]);
-            if(paginaAntiga == personagemPageDto.Pagina) {
+            if (paginaAntiga == personagemPageDto.Pagina)
+            {
                 personagemPageDto.Pagina = 0;
                 personagemPageDto = ConsultarPersonagens(personagem: personagemPageDto.FiltroDePesquisa, pagina: personagemPageDto.Pagina);
+                personagemPageDto.PersonagensFavoritos = ConsultarPersonagens(ConsultarFavoritos()).PersonagensFavoritos;
             }
             else
             {
-                personagemPageDto = ConsultarPersonagens(pagina: personagemPageDto.Pagina, ultimaConsulta : personagemPageDto.ultimaConsulta);
+                personagemPageDto = ConsultarPersonagens(pagina: personagemPageDto.Pagina, ultimaConsulta: personagemPageDto.ultimaConsulta);
+                personagemPageDto.Personagens.Except(personagemPageDto.PersonagensFavoritos);
+                personagemPageDto.PersonagensFavoritos = ConsultarPersonagens(ConsultarFavoritos()).PersonagensFavoritos;
             }
 
-            
+
             return View(personagemPageDto);
         }
 
@@ -53,7 +59,8 @@ namespace MarvelApp.Controllers
             personagem Personagem = new();
             using (var client = new HttpClient())
             {
-                Favoritos = new();
+                if (Favoritos == null)
+                    Favoritos = new();
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(
                     new MediaTypeWithQualityHeaderValue("application/json"));
@@ -63,44 +70,31 @@ namespace MarvelApp.Controllers
                 var consulta = baseUrl + $"?ts={ts}&apikey={publicKey}&hash={hash}";
                 consulta += "&limit=90";
 
-                if (pagina != 0)
-                {
-                    if (ultimaConsulta != null)
-                        consulta = ultimaConsulta;
 
-                    personagemPageDto.Pagina = pagina;
-                    int contagemIgnorada = pagina * 30;
-                    consulta += $"&offset={contagemIgnorada}";
-                }
 
-                
+
 
                 if (Favoritos.Count != 0)
                 {
-                    
+
                     foreach (var favorito in Favoritos)
                     {
-                        consulta += $"&id={favorito}";
-                        HttpResponseMessage responseFavorito = client.GetAsync(consulta).Result;
+                        string novaconsulta = consulta + $"&id={favorito}";
+
+                        HttpResponseMessage responseFavorito = client.GetAsync(novaconsulta).Result;
 
 
 
                         responseFavorito.EnsureSuccessStatusCode();
 
                         dynamic resultadoFavoritos = JsonConvert.DeserializeObject(responseFavorito.Content.ReadAsStringAsync().Result);
-
-                        if (resultadoFavoritos.data.total != null)
-                        {
-                            personagemPageDto.ContagemDePaginas = Convert.ToInt32(resultadoFavoritos.data.total.Value);
-                            personagemPageDto.ContagemDePaginas = (personagemPageDto.ContagemDePaginas - (personagemPageDto.ContagemDePaginas % 30)) / 30;
-                        }
-
+                        Personagem = new();
                         Personagem.ID = resultadoFavoritos.data.results[0].id;
                         Personagem.Nome = resultadoFavoritos.data.results[0].name;
                         Personagem.Descricao = resultadoFavoritos.data.results[0].description;
                         Personagem.URLIMAGEM = resultadoFavoritos.data.results[0].thumbnail.path + "." + resultadoFavoritos.data.results[0].thumbnail.extension;
-                        Personagem.URLWIKI = resultadoFavoritos.data.results[0].url;
-                        personagemPageDto.Personagens.Add(Personagem);
+                        Personagem.URLWIKI = resultadoFavoritos.data.results[0].urls[1].url;
+                        personagemPageDto.PersonagensFavoritos.Add(Personagem);
 
                     }
 
@@ -109,19 +103,29 @@ namespace MarvelApp.Controllers
                 else
                 {
 
+                    if (pagina != 0)
+                    {
+                        if (ultimaConsulta != null)
+                            consulta = ultimaConsulta;
+
+                        personagemPageDto.Pagina = pagina;
+                        int contagemIgnorada = pagina * 30;
+                        consulta += $"&offset={contagemIgnorada}";
+                    }
+
                     if (personagem != null)
                     {
 
                         if (personagem.NomeInicial != null)
-                            consulta += "&nameStartsWith="+personagem.NomeInicial;
+                            consulta += "&nameStartsWith=" + personagem.NomeInicial;
                         if (personagem.Nome != null)
-                            consulta += "&name="+personagem.Nome;
+                            consulta += "&name=" + personagem.Nome;
                         if (personagem.orderBy != "0")
-                            consulta += "&orderBy="+personagem.orderBy;
+                            consulta += "&orderBy=" + personagem.orderBy;
 
                     }
                 }
-            //name=teste&nameStartsWith=a&modifiedSince=12-03&comics=teste&series=teste&events=teste&stories=teste&orderBy=name
+
 
                 HttpResponseMessage response = client.GetAsync(consulta).Result;
 
@@ -174,14 +178,35 @@ namespace MarvelApp.Controllers
             }
         }
 
-        private void AdicionarFavorito(int id)
+        public IActionResult Favorito(int id, bool retirar = false)
         {
             using (var db = new DataBaseContext())
             {
-                var context = db.personagensFavoritos.Add(new Favoritos { IdFavorito = id });
-                db.SaveChanges();
+
+                var context = db.personagensFavoritos;
+                if (retirar == true)
+                {
+                    context.Remove(context.Where(tb => tb.IdFavorito == id).FirstOrDefault());
+                    db.SaveChanges();
+                }
+                else
+                {
+                    if (context.Count() >= 5)
+                        throw new Exception("Só se pode adicionar 5 personagens favoritos!");
+                    else
+                    {
+                        if (context.Where(tb => tb.IdFavorito == id).Count() != 0)
+                            throw new Exception("Personagem ja esta nos favoritos");
+                        context.Add(new Favoritos { IdFavorito = id });
+                        db.SaveChanges();
+                    }
+                }
+
             }
+
+            return RedirectToAction("Index");
         }
+
 
     }
 }

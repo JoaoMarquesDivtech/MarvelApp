@@ -55,52 +55,36 @@
 
 
 
-    <hr />
-    @{
-        /*foreach (var obj in Model)
-        {
-    <table class="table table-bordered">
-    <caption>Favoritos:</caption>
-    <tr>
-        <td>Desfavoritar</td>
-        <td>Foto</td>
-        <td>Nome</td>
-        <td>Descrição</td>
-    </tr>
-    @{
-
-        <tr>
-            <td><button class="btn btn-primary">x</button></td>
-            <td><img src="@obj.URLIMAGEM" width="320" height="205" /></td>
-            <td>@obj.Nome</td>
-            <td>@obj.Descricao</td>
-        </tr>
-
-
-    }
-    </table>
-    */
-    }
 
     <hr />
     <h3>Personagens</h3>
 
 
-
-
-
-
     <table class="table table-bordered">
         <tr>
+            <td></td>
             <td>ID</td>
             <td>Foto</td>
             <td>Nome</td>
             <td>Descrição</td>
         </tr>
         @{
-            foreach (var obj in Model.Personagens)
-            {
+            if (Model.PersonagensFavoritos != null)
+                foreach (var obj in Model.PersonagensFavoritos)
+                {
+                    <tr>
+                        <td><button asp-action="Favorito" asp-controller="Home" asp-route-id="@obj.ID" asp-route-retirar="@true"  class="form-control btn btn-success"><i class="fa-solid fa-star"></i></button></td>
+                        <td>@obj.ID</td>
+                        <td><img src="@obj.URLIMAGEM" width="220" height="105" /></td>
+                        <td>@obj.Nome</td>
+                        <td>@obj.Descricao</td>
+                    </tr>
+                }
+            if (Model.Personagens != null)
+                foreach (var obj in Model.Personagens)
+                {
                 <tr>
+                    <td><button asp-action="Favorito" asp-controller="Home" asp-route-id="@obj.ID" class="form-control btn btn-primary"><i class="fa-solid fa-star"></i></button></td>
                     <td>@obj.ID</td>
                     <td><img src="@obj.URLIMAGEM" width="220" height="105" /></td>
                     <td>@obj.Nome</td>
