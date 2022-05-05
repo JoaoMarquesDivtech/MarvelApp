@@ -9,7 +9,7 @@ namespace MarvelApp.Data
 {
     public class DataBaseContext : DbContext
     {
-        public string strConnection { get; set; } = "Server=(localdb)\\MSSQLLocalDB;Database=WebAppDb;Trusted_Connection=True;MultipleActiveResultSets=true";
+        public string strConnection { get; set; } = "";
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseSqlServer(strConnection);
