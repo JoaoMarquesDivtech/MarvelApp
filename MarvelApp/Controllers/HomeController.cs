@@ -180,6 +180,7 @@ namespace MarvelApp.Controllers
 
         public IActionResult Favorito(int id, bool retirar = false)
         {
+            try { 
             using (var db = new DataBaseContext())
             {
 
@@ -202,6 +203,11 @@ namespace MarvelApp.Controllers
                     }
                 }
 
+            }
+            }
+            catch(Exception ex)
+            {
+                //Tratamento vazio provisorio
             }
 
             return RedirectToAction("Index");
